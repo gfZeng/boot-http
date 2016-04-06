@@ -56,11 +56,11 @@
 ;; Handlers
 ;;
 
-(defn wrap-handler [{:keys [handler reload env-dirs]}]
+(defn wrap-handler [{:keys [handler reload middlewares env-dirs]}]
   (when handler
-    (if reload
-      (wrap-reload (u/resolve-sym handler) {:dirs (or env-dirs ["src"])})
-      (u/resolve-sym handler))))
+    (cond-> ((apply comp (map u/resolve-sym middlewares))
+             (u/resolve-sym handler))
+      reload (wrap-reload {:dirs (or env-dirs ["src"])}))))
 
 (defn- maybe-create-dir! [dir]
   (let [dir-file (io/file dir)]

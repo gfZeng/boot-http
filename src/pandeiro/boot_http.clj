@@ -28,17 +28,18 @@
   "Start a web server on localhost, serving resources and optionally a directory.
   Listens on port 3000 by default."
 
-  [d dir           PATH str  "The directory to serve; created if doesn't exist."
-   H handler       SYM  sym  "The ring handler to serve."
-   i init          SYM  sym  "A function to run prior to starting the server."
-   c cleanup       SYM  sym  "A function to run after the server stops."
-   r resource-root ROOT str  "The root prefix when serving resources from classpath"
-   p port          PORT int  "The port to listen on. (Default: 3000)"
-   k httpkit            bool "Use Http-kit server instead of Jetty"
-   s silent             bool "Silent-mode (don't output anything)"
-   R reload             bool "Reload modified namespaces on each request."
-   n nrepl         REPL edn  "nREPL server parameters e.g. \"{:port 3001, :bind \"0.0.0.0\"}\""
-   N not-found     SYM  sym "a ring handler for requested resources that aren't in your directory. Useful for pushState."]
+  [d dir           PATH str   "The directory to serve; created if doesn't exist."
+   H handler       SYM  sym   "The ring handler to serve."
+   m middlewares   MS   [sym] "Addtional middlewares for handler"
+   i init          SYM  sym   "A function to run prior to starting the server."
+   c cleanup       SYM  sym   "A function to run after the server stops."
+   r resource-root ROOT str   "The root prefix when serving resources from classpath"
+   p port          PORT int   "The port to listen on. (Default: 3000)"
+   k httpkit            bool  "Use Http-kit server instead of Jetty"
+   s silent             bool  "Silent-mode (don't output anything)"
+   R reload             bool  "Reload modified namespaces on each request."
+   n nrepl         REPL edn   "nREPL server parameters e.g. \"{:port 3001, :bind \"0.0.0.0\"}\""
+   N not-found     SYM  sym   "a ring handler for requested resources that aren't in your directory. Useful for pushState."]
 
   (let [port        (or port default-port)
         server-dep  (if httpkit httpkit-dep jetty-dep)
@@ -57,6 +58,7 @@
                        (def server
                          (http/server
                           {:dir ~dir, :port ~port, :handler '~handler,
+                           :middlewares '~middlewares
                            :reload '~reload, :env-dirs ~(vec (:directories pod/env)), :httpkit ~httpkit,
                            :not-found '~not-found,
                            :resource-root ~resource-root}))
