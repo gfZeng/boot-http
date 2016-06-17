@@ -11,7 +11,7 @@
  '[adzerk.bootlaces :refer :all] ;; tasks: build-jar push-snapshot push-release
  '[adzerk.boot-test :refer :all])
 
-(def +version+ "0.7.4")
+(def +version+ "0.7.5")
 
 (bootlaces! +version+)
 
