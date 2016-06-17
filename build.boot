@@ -3,6 +3,7 @@
  :dev-dependencies '[[peridot "0.4.3"]]
  :dependencies     '[[adzerk/bootlaces    "0.1.12" :scope "test"]
                      [adzerk/boot-test    "1.0.4"  :scope "test"]
+                     [clj-http "2.2.0"]
                      [ring/ring-core "1.4.0"]
                      [ring/ring-devel "1.4.0"]])
 

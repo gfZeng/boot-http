@@ -24,7 +24,8 @@
 
   [d dir           PATH str   "The directory to serve; created if doesn't exist."
    H handler       SYM  sym   "The ring handler to serve."
-   m middlewares   MS   [sym] "Addtional middlewares for handler"
+   P proxy         PORXY edn  "proxy settings"
+   m middlewares   MS   [edn] "Addtional middlewares for handler"
    i init          SYM  sym   "A function to run prior to starting the server."
    c cleanup       SYM  sym   "A function to run after the server stops."
    r resource-root ROOT str   "The root prefix when serving resources from classpath"
@@ -34,8 +35,8 @@
    R reload             bool  "Reload modified namespaces on each request."
    N not-found     SYM  sym   "a ring handler for requested resources that aren't in your directory. Useful for pushState."]
 
-  (let [port        (or port default-port)
-        server-dep  (if httpkit httpkit-dep jetty-dep)]
+  (let [port       (or port default-port)
+        server-dep (if httpkit httpkit-dep jetty-dep)]
     (core/set-env! :dependencies #(conj % server-dep))
     (when (and silent (not httpkit))
       (silence-jetty!))
@@ -43,10 +44,11 @@
       (when init
         (u/resolve-and-invoke init))
       (let [server (http/server
-                    {:dir dir, :port port, :handler handler,
-                     :middlewares middlewares
-                     :reload reload, :env-dirs (vec (:directories pod/env)), :httpkit httpkit,
-                     :not-found not-found,
+                    {:dir           dir,    :port     port,                         :handler handler,
+                     :proxy         proxy
+                     :middlewares   middlewares
+                     :reload        reload, :env-dirs (vec (:directories pod/env)), :httpkit httpkit,
+                     :not-found     not-found,
                      :resource-root resource-root})]
         (core/cleanup
          (when server

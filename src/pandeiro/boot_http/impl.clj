@@ -8,9 +8,12 @@
              [resource :refer [wrap-resource]]
              [content-type :refer [wrap-content-type]]
              [not-modified :refer [wrap-not-modified]]
-             [reload :refer [wrap-reload]]]
+             [reload :refer [wrap-reload]]
+             [cookies :refer [wrap-cookies]]]
             [pandeiro.boot-http.util :as u]
-            [boot.util :as util]))
+            [clj-http.client         :refer [request]]
+            [boot.util :as util])
+  (:import java.net.URI))
 
 ;;
 ;; Directory serving
@@ -52,14 +55,66 @@
     (or ((index-for dir) req)
         (handler req))))
 
+(defn- prepare-cookies
+  "Removes the :domain and :secure keys and converts the :expires key (a Date)
+  to a string in the ring response map resp. Returns resp with cookies properly
+  munged."
+  [resp]
+  (let [prepare #(-> %
+                     (update-in [1 :expires] str)
+                     (update-in 1 dissoc :domain :secure))]
+    (assoc resp :cookies (into {} (map prepare (:cookies resp))))))
+
+(defn- proxy-request
+  [req proxied-path remote-uri-base & [http-opts]]
+  (let [remote-base (URI. (s/replace-first remote-uri-base #"/$" ""))
+        remote-uri  (URI. (.getScheme remote-base)
+                          (.getAuthority remote-base)
+                          (str (.getPath remote-base)
+                               (if (instance? java.util.regex.Pattern proxied-path)
+                                 (s/replace-first (:uri req) proxied-path "")
+                                 (:uri req)))
+                          (:query-string req)
+                          nil)]
+    (-> (merge {:method           (:request-method req)
+                :url              (str remote-uri)
+                :headers          (dissoc (:headers req) "host" "content-length")
+                :body             (not-empty (slurp (:body req)))
+                :as               :stream
+                :force-redirects  false
+                :follow-redirects false
+                :decompress-body  false}
+               (dissoc http-opts :decompress-body))
+        request
+        prepare-cookies)))
+
+(defn wrap-proxy
+  [h proxied-path remote-uri-base & [http-opts]]
+  (wrap-cookies
+   (fn [req]
+     (if (re-find (if (instance? java.util.regex.Pattern proxied-path)
+                    proxied-path
+                    (re-pattern (str "^" proxied-path)))
+                  (:uri req))
+       (proxy-request req proxied-path remote-uri-base http-opts)
+       (h req)))))
+
 ;;
 ;; Handlers
 ;;
 
-(defn wrap-handler [{:keys [handler reload middlewares env-dirs]}]
+(defn- resolve-middleware [m]
+  (cond
+    (fn? m) m
+    (symbol? m)  (u/resolve-sym m)
+    (seq? m) (eval (list 'fn '[%] m))))
+
+
+(defn wrap-handler [{:keys [handler proxy reload middlewares env-dirs]}]
   (when handler
-    (cond-> ((apply comp (map u/resolve-sym middlewares))
+    (cond-> ((apply comp (map resolve-middleware middlewares))
              (u/resolve-sym handler))
+      proxy  (wrap-proxy (ffirst proxy) (fnext (first proxy)))
       reload (wrap-reload {:dirs (or env-dirs ["src"])}))))
 
 (defn- maybe-create-dir! [dir]
