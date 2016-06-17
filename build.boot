@@ -11,16 +11,16 @@
  '[adzerk.bootlaces :refer :all] ;; tasks: build-jar push-snapshot push-release
  '[adzerk.boot-test :refer :all])
 
-(def +version+ "0.7.4-SNAPSHOT")
+(def +version+ "0.7.4")
 
 (bootlaces! +version+)
 
 (task-options!
- pom {:project     'pandeiro/boot-http
+ pom {:project     'gfzeng/boot-http
       :version     +version+
       :description "Boot task to serve HTTP."
-      :url         "https://github.com/pandeiro/boot-http"
-      :scm         {:url "https://github.com/pandeiro/boot-http"}
+      :url         "https://github.com/gfzeng/boot-http"
+      :scm         {:url "https://github.com/gfzeng/boot-http"}
       :license     {"Eclipse Public License" "http://www.eclipse.org/legal/epl-v10.html"}})
 
 (deftask test-boot-http []
