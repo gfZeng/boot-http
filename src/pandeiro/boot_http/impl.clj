@@ -62,7 +62,10 @@
   [resp]
   (let [prepare #(-> %
                      (update-in [1 :expires] str)
-                     (update-in 1 dissoc :domain :secure))]
+                     ;; :discard, :version is older version of rfc2965.
+                     ;; kill my ass, spring
+                     ;; http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/http/HttpHeaders.html#set_cookie2
+                     (update 1 dissoc :domain :secure :discard :version))]
     (assoc resp :cookies (into {} (map prepare (:cookies resp))))))
 
 (defn- proxy-request
