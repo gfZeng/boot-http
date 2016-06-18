@@ -68,6 +68,13 @@
                      (update 1 dissoc :domain :secure :discard :version))]
     (assoc resp :cookies (into {} (map prepare (:cookies resp))))))
 
+(defn- slurp-binary
+  [^java.io.InputStream in len]
+  (with-open [in in]
+    (let [buf (byte-array len)]
+      (.read in buf)
+      buf)))
+
 (defn- proxy-request
   [req proxied-path remote-uri-base & [http-opts]]
   (let [remote-base (URI. (s/replace-first remote-uri-base #"/$" ""))
@@ -82,7 +89,10 @@
     (-> (merge {:method           (:request-method req)
                 :url              (str remote-uri)
                 :headers          (dissoc (:headers req) "host" "content-length")
-                :body             (not-empty (slurp (:body req)))
+                :body             (when-let [len (some-> req
+                                                         (get-in [:headers "content-length"])
+                                                         Integer/parseInt)]
+                                    (slurp-binary (:body req) len))
                 :as               :stream
                 :force-redirects  false
                 :follow-redirects false
