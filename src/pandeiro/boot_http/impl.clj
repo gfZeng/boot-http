@@ -102,15 +102,21 @@
         prepare-cookies)))
 
 (defn wrap-proxy
-  [h proxied-path remote-uri-base & [http-opts]]
-  (wrap-cookies
-   (fn [req]
-     (if (re-find (if (instance? java.util.regex.Pattern proxied-path)
-                    proxied-path
-                    (re-pattern (str "^" proxied-path)))
-                  (:uri req))
-       (proxy-request req proxied-path remote-uri-base http-opts)
-       (h req)))))
+  [h routes]
+  (if-not (seq routes)
+    h
+    (letfn [(match? [pattern path]
+              (if (string? pattern)
+                (s/starts-with? path pattern)
+                (re-find pattern path)))
+            (proxy-match [route path]
+              (when (match? (first route) path)
+                route))]
+      (wrap-cookies
+       (fn [req]
+         (if-let [[path proxy-url] (some #(proxy-match % (:uri req)) routes)]
+           (proxy-request req path proxy-url)
+           (h req)))))))
 
 ;;
 ;; Handlers
@@ -123,11 +129,10 @@
     (seq? m) (eval (list 'fn '[%] m))))
 
 
-(defn wrap-handler [{:keys [handler proxy reload middlewares env-dirs]}]
+(defn wrap-handler [{:keys [handler reload middlewares env-dirs]}]
   (when handler
     (cond-> ((apply comp (map resolve-middleware middlewares))
              (u/resolve-sym handler))
-      proxy  (wrap-proxy (ffirst proxy) (fnext (first proxy)))
       reload (wrap-reload {:dirs (or env-dirs ["src"])}))))
 
 (defn- maybe-create-dir! [dir]
@@ -164,9 +169,10 @@
       (wrap-resource resource-root)))
 
 (defn ring-handler [opts]
-  (or (wrap-handler opts)
-      (dir-handler opts)
-      (resources-handler opts)))
+  (-> (or (wrap-handler opts)
+          (dir-handler opts)
+          (resources-handler opts))
+      (wrap-proxy (:proxy opts))))
 
 ;;
 ;; Jetty / HTTP Kit
