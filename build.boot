@@ -4,14 +4,14 @@
  :dependencies     '[[adzerk/bootlaces    "0.1.12" :scope "test"]
                      [adzerk/boot-test    "1.0.4"  :scope "test"]
                      [clj-http "2.2.0"]
-                     [ring/ring-core "1.4.0"]
-                     [ring/ring-devel "1.4.0"]])
+                     [ring/ring-core      "1.6.1"]
+                     [ring/ring-devel     "1.6.1"]])
 
 (require
  '[adzerk.bootlaces :refer :all] ;; tasks: build-jar push-snapshot push-release
  '[adzerk.boot-test :refer :all])
 
-(def +version+ "0.7.6")
+(def +version+ "0.7.7")
 
 (bootlaces! +version+)
 

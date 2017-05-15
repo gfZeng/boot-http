@@ -5,7 +5,7 @@ that can serve resources, directories or a typical ring handler.
 
 [](dependency)
 ```clojure
-[gfzeng/boot-http "0.7.6"] ;; latest release
+[gfzeng/boot-http "0.7.7"] ;; latest release
 ```
 [](/dependency)
 
@@ -97,14 +97,6 @@ The actual port number being used is available as `:http-port` on the fileset.
 
 ```bash
 boot -d pandeiro/boot-http serve -d . -p 8888 wait
-```
-
-#### -k / --httpkit
-
-Use the HTTP Kit webserver instead of Jetty.
-
-```bash
-boot -d pandeiro/boot-http serve -d . -k wait  # uses httpkit
 ```
 
 #### -n / --nrepl

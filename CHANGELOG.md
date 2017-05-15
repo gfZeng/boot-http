@@ -28,10 +28,6 @@
 
 - Add: -R/--reload flag to reload modified namespaces on each request
 
-# 0.6.1
-
-- Bump HTTP Kit to 2.1.19 to fix RejectedExecutionException
-
 # 0.6.0
 
 - Add: init and cleanup arguments for running functions before and after server
@@ -47,7 +43,6 @@
 # 0.5.0
 
 - Fix: directory listings and files take precedence over resources with :dir option
-- Add: -k/--httpkit option to use Http-kit instead of Jetty
 
 # 0.4.2
 

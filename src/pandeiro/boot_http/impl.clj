@@ -12,6 +12,7 @@
              [cookies :refer [wrap-cookies]]]
             [pandeiro.boot-http.util :as u]
             [clj-http.client         :refer [request]]
+            [boot.core :refer [merge-env!]]
             [boot.util :as util])
   (:import java.net.URI))
 
@@ -175,43 +176,39 @@
       (wrap-proxy (:proxy opts))))
 
 ;;
-;; Jetty / HTTP Kit
 ;;
 
-(defn- start-httpkit [handler opts]
-  (require 'org.httpkit.server)
-  (let [stop-server ((resolve 'org.httpkit.server/run-server) handler opts)]
-    (merge (meta stop-server)
-           {:stop-server stop-server
-            :human-name "HTTP Kit"})))
+(defmulti start-server
+  (fn [_ opts]
+    (:adapter opts)))
 
-(defn- start-jetty [handler opts]
+(defmethod start-server :default [handler opts]
+  (when (:silent opts)
+    (System/setProperty "org.eclipse.jetty.LEVEL" "WARN"))
+  (merge-env! :dependencies '[[ring/ring-jetty-adapter "RELEASE"]])
   (require 'ring.adapter.jetty)
-  (let [server ((resolve 'ring.adapter.jetty/run-jetty) handler opts)]
-    {:server server
-     :human-name "Jetty"
-     :local-port (-> server .getConnectors first .getLocalPort)
+  (let [server ((resolve 'ring.adapter.jetty/run-jetty)
+                handler {:port (:port opts) :join? false})]
+    {:server      server
+     :human-name  "Jetty"
+     :local-port  (-> server .getConnectors first .getLocalPort)
      :stop-server #(.stop server)}))
 
-(defn server [{:keys [port httpkit] :as opts}]
-  ((if httpkit start-httpkit start-jetty)
+(defmethod start-server 'aleph
+  [handler opts]
+  (merge-env! :dependencies '[[aleph "RELEASE"]])
+  (require 'aleph.http)
+  (require 'aleph.netty)
+  (let [server ((resolve 'aleph.http/start-server)
+                handler {:port (:port opts)})]
+    {:server      server
+     :human-name  "Netty/aleph"
+     :local-port  ((resolve 'aleph.netty/port) server)
+     :stop-server #(.close server)}))
+
+(defn server [{:keys [port] :as opts}]
+  (start-server
    (-> (ring-handler opts)
        wrap-content-type
        wrap-not-modified)
-   {:port port :join? false}))
-
-;;
-;; nREPL
-;;
-
-(defn nrepl-server [{:keys [nrepl]}]
-  (require 'clojure.tools.nrepl.server)
-  (let [{:keys [bind port] :or {bind "127.0.0.1"}} nrepl
-        start-server (resolve 'clojure.tools.nrepl.server/start-server)
-        repl-server  (if port
-                       (start-server :port port :bind bind)
-                       (start-server :bind bind))]
-    (util/info
-     "Started boot-http nREPL on nrepl://%s:%d\n"
-     bind (:port repl-server))
-    repl-server))
+   opts))
